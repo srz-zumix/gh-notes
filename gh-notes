@@ -28,6 +28,7 @@ function usage() {
         prune       Prune notes that point to non-existing objects
         get-ref     List available notes references
         fetch       Fetch notes from a remote repository
+        push        Push notes to a remote repository
 " "$1"
 }
 
@@ -59,11 +60,10 @@ help | --help | -h)
     break
     ;;
 *)
-    if [ -z "${1:-}" ]; then
-        break
+    if [ -n "${1:-}" ]; then
+        SUBCOMMAND=$1
+        shift
     fi
-    SUBCOMMAND=$1
-    shift
     ;;
 esac
 
@@ -90,7 +90,7 @@ parse_common_params() {
 }
 
 parse_fetch_params() {
-    GIT_NOTES_FETCH_REFS=refs/notes/*
+    GIT_NOTES_FETCH_REFS='refs/notes/*'
     GIT_NOTES_FETCH_REMOTE=
     GIT_FETCH_OPTIONS=()
     while :; do
@@ -134,7 +134,7 @@ parse_fetch_params() {
 }
 
 parse_push_params() {
-    GIT_NOTES_PUSH_REFS=refs/notes/*
+    GIT_NOTES_PUSH_REFS='refs/notes/*'
     GIT_NOTES_PUSH_REMOTE=
     GIT_PUSH_OPTIONS=()
     while :; do
