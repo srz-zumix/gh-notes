@@ -1,0 +1,193 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+msg() {
+    echo >&2 -e "${1-}"
+}
+
+die() {
+    local msg=$1
+    local code=${2-1} # default exit status 1
+    msg "$msg"
+    exit "$code"
+}
+
+function usage() {
+    die "usage:gh notes <subcommand> [options] [args]
+
+    Manage notes for the current repository.
+
+    Subcommands:
+        add         Add a note to an object
+        append      Append text to a note
+        copy        Copy a note from one object to another
+        edit        Edit a note
+        show        Show the notes on an object (default)
+        merge       Merge notes from another ref
+        remove      Remove notes from an object
+        prune       Prune notes that point to non-existing objects
+        get-ref     List available notes references
+        fetch       Fetch notes from a remote repository
+        push        Push notes to a remote repository
+" "$1"
+}
+
+function fetch_usage() {
+    die "usage: gh notes fetch [options] [remote]
+
+        -h, --help      Show this help message
+        -n, --namespace Specify the namespace to fetch notes from
+        --ref           Specify the ref to fetch notes from
+" "$1"
+}
+
+function push_usage() {
+    die "usage: gh notes push [options] [remote]
+
+        -h, --help      Show this help message
+        -n, --namespace Specify the namespace to push notes to
+        --ref           Specify the ref to push notes to
+" "$1"
+}
+
+# parse subcommand
+SUBCOMMAND=show
+case "${1-}" in
+help | --help | -h)
+    usage 0
+    ;;
+--*| -* )
+    ;;
+*)
+    if [ -n "${1:-}" ]; then
+        SUBCOMMAND=$1
+        shift
+    fi
+    ;;
+esac
+
+parse_common_params() {
+    GIT_NOTES_OPTIONS=()
+    while :; do
+        case "${1-}" in
+
+        -n | --namespace)
+            NAMESPACE="${2-}"
+            GIT_NOTES_OPTIONS+=("--ref=refs/notes/${NAMESPACE}")
+            shift
+            ;;
+        *)
+            if [ -z "${1:-}" ]; then
+                break
+            fi
+            GIT_NOTES_OPTIONS+=("$1")
+            ;;
+        esac
+        shift
+    done
+    return 0
+}
+
+parse_fetch_params() {
+    GIT_NOTES_FETCH_REFS='refs/notes/*'
+    GIT_NOTES_FETCH_REMOTE=
+    GIT_FETCH_OPTIONS=()
+    while :; do
+        case "${1-}" in
+
+        -h | --help)
+            fetch_usage 0
+            ;;
+        --ref)
+            GIT_NOTES_FETCH_REFS="${2-}"
+            shift
+            ;;
+        -n | --namespace)
+            NAMESPACE="${2-}"
+            GIT_NOTES_FETCH_REFS="refs/notes/${NAMESPACE}"
+            shift
+            ;;
+        -- )
+            shift
+            GIT_FETCH_OPTIONS=("$@")
+            break ;;
+        --*| -* )
+            echo "${1:-} is invalid option."
+            fetch_usage 1
+            ;;
+        *)
+            if [ -z "${1:-}" ]; then
+                break
+            fi
+            if [ -z "${GIT_NOTES_FETCH_REMOTE:-}" ]; then
+                GIT_NOTES_FETCH_REMOTE="${1-}"
+            else
+                echo "${1:-} is invalid option."
+                fetch_usage 1
+            fi
+            ;;
+        esac
+        shift
+    done
+    return 0
+}
+
+parse_push_params() {
+    GIT_NOTES_PUSH_REFS='refs/notes/*'
+    GIT_NOTES_PUSH_REMOTE=
+    GIT_PUSH_OPTIONS=()
+    while :; do
+        case "${1-}" in
+
+        -h | --help)
+            push_usage 0
+            ;;
+        --ref)
+            GIT_NOTES_PUSH_REFS="${2-}"
+            shift
+            ;;
+        -n | --namespace)
+            NAMESPACE="${2-}"
+            GIT_NOTES_PUSH_REFS="refs/notes/${NAMESPACE}"
+            shift
+            ;;
+        -- )
+            shift
+            GIT_PUSH_OPTIONS=("$@")
+            break ;;
+        --*| -* )
+            echo "${1:-} is invalid option."
+            push_usage 1
+            ;;
+        *)
+            if [ -z "${1:-}" ]; then
+                break
+            fi
+            if [ -z "${GIT_NOTES_PUSH_REMOTE:-}" ]; then
+                GIT_NOTES_PUSH_REMOTE="${1-}"
+            else
+                echo "${1:-} is invalid option."
+                fetch_usage 1
+            fi
+            ;;
+        esac
+        shift
+    done
+    return 0
+}
+
+case "${SUBCOMMAND}" in
+add | copy | append | edit | show | merge | remove | prune | get-ref )
+    parse_common_params "$@"
+    git notes "${SUBCOMMAND}" "${GIT_NOTES_OPTIONS[@]}"
+    ;;
+fetch )
+    parse_fetch_params "$@"
+    git fetch "${GIT_NOTES_FETCH_REMOTE:-origin}" "${GIT_NOTES_FETCH_REFS}:${GIT_NOTES_FETCH_REFS}" "${GIT_FETCH_OPTIONS[@]}"
+    ;;
+push )
+    parse_push_params "$@"
+    git push "${GIT_NOTES_PUSH_REMOTE:-origin}" "${GIT_NOTES_PUSH_REFS}:${GIT_NOTES_PUSH_REFS}" "${GIT_PUSH_OPTIONS[@]}"
+    ;;
+esac
+
