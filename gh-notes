@@ -32,7 +32,7 @@ function usage() {
 }
 
 function fetch_usage() {
-    die "usage: gh notes fetch [options]
+    die "usage: gh notes fetch [options] [remote]
 
         -h, --help      Show this help message
         -n, --namespace Specify the namespace to fetch notes from
@@ -41,7 +41,7 @@ function fetch_usage() {
 }
 
 function push_usage() {
-    die "usage: gh notes push [options]
+    die "usage: gh notes push [options] [remote]
 
         -h, --help      Show this help message
         -n, --namespace Specify the namespace to push notes to
@@ -91,6 +91,7 @@ parse_common_params() {
 
 parse_fetch_params() {
     GIT_NOTES_FETCH_REFS=refs/notes/*
+    GIT_NOTES_FETCH_REMOTE=
     GIT_FETCH_OPTIONS=()
     while :; do
         case "${1-}" in
@@ -116,11 +117,15 @@ parse_fetch_params() {
             fetch_usage 1
             ;;
         *)
-            if [ -n "${1:-}" ]; then
+            if [ -z "${1:-}" ]; then
+                break
+            fi
+            if [ -z "${GIT_NOTES_FETCH_REMOTE:-}" ]; then
+                GIT_NOTES_FETCH_REMOTE="${1-}"
+            else
                 echo "${1:-} is invalid option."
                 fetch_usage 1
             fi
-            break
             ;;
         esac
         shift
@@ -130,6 +135,7 @@ parse_fetch_params() {
 
 parse_push_params() {
     GIT_NOTES_PUSH_REFS=refs/notes/*
+    GIT_NOTES_PUSH_REMOTE=
     GIT_PUSH_OPTIONS=()
     while :; do
         case "${1-}" in
@@ -155,11 +161,15 @@ parse_push_params() {
             push_usage 1
             ;;
         *)
-            if [ -n "${1:-}" ]; then
-                echo "${1:-} is invalid option."
-                push_usage 1
+            if [ -z "${1:-}" ]; then
+                break
             fi
-            break
+            if [ -z "${GIT_NOTES_PUSH_REMOTE:-}" ]; then
+                GIT_NOTES_PUSH_REMOTE="${1-}"
+            else
+                echo "${1:-} is invalid option."
+                fetch_usage 1
+            fi
             ;;
         esac
         shift
@@ -174,11 +184,11 @@ add | copy | append | edit | show | merge | remove | prune | get-ref )
     ;;
 fetch )
     parse_fetch_params "$@"
-    git fetch origin "${GIT_NOTES_FETCH_REFS}:${GIT_NOTES_FETCH_REFS}" "${GIT_FETCH_OPTIONS[@]}"
+    git fetch "${GIT_NOTES_FETCH_REMOTE:-origin}" "${GIT_NOTES_FETCH_REFS}:${GIT_NOTES_FETCH_REFS}" "${GIT_FETCH_OPTIONS[@]}"
     ;;
 push )
     parse_push_params "$@"
-    git push origin "${GIT_NOTES_PUSH_REFS}:${GIT_NOTES_PUSH_REFS}" "${GIT_PUSH_OPTIONS[@]}"
+    git push "${GIT_NOTES_PUSH_REMOTE:-origin}" "${GIT_NOTES_PUSH_REFS}:${GIT_NOTES_PUSH_REFS}" "${GIT_PUSH_OPTIONS[@]}"
     ;;
 esac
 
