@@ -35,7 +35,7 @@ jobs:
       - uses: actions/checkout@v7
         with:
           persist-credentials: false
-      - uses: reviewdog/action-actionlint@48e36f54d8da326b83ab061aee2cc5e01b5ca46f # v1.80.6
+      - uses: reviewdog/action-actionlint@619a81ec64ff8c0211cd6146eb2b21e8f1d7f440 # v1.81.1
         with:
           reporter: github-pr-review
 
@@ -50,6 +50,6 @@ jobs:
         with:
           persist-credentials: false
       - name: markdownlint
-        uses: reviewdog/action-markdownlint@0f00f9816d25b024975712a1ad4ea03dbf5848a6 # v0.31.7
+        uses: reviewdog/action-markdownlint@f8e8c509d6e706db79bb39c1c506c968f1a66b82 # v0.32.0
         with:
           reporter: github-pr-review
